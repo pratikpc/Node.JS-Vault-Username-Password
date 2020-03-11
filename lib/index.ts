@@ -19,11 +19,10 @@ export class VaultAccess {
     constructor(Config: VaultConfig) {
         // Lower Case All Params
         {
-            Config.Policy = Config.Policy + "/" + Config.UserName;
-            Config.Path = Config.SecretMountPoint + "/" + Config.Path + "/" + Config.UserName;
-            Config.Policy = Config.Policy.toLowerCase();
-            Config.Path = Config.Path.toLowerCase();
             Config.SecretMountPoint = Config.SecretMountPoint.toLowerCase();
+            Config.Path = Config.SecretMountPoint + "/" + Config.Path;
+            Config.Path = Config.Path.toLowerCase();
+            Config.Policy = Config.Policy.toLowerCase();
             Config.UserName = Config.UserName.toLowerCase();
         }
         this.Config = Config;
@@ -37,9 +36,9 @@ export class VaultAccess {
         await this.InitVault();
         await this.InitLogin();
         await this.Mount();
-        await this.AddPolicy();
     }
     public async InitVault() {
+        this.AdminMode();
         const check_init = await this.vault.initialized();
         if (Boolean(check_init.initialized))
             return;
@@ -49,6 +48,7 @@ export class VaultAccess {
         await this.vault.unseal({ secret_shares: 1, key });
     }
     public async InitLogin() {
+        this.AdminMode();
         const auths = await this.vault.auths();
         if (auths.hasOwnProperty("userpass/"))
             return null;
@@ -59,14 +59,21 @@ export class VaultAccess {
         });
     }
 
-    public async MountPresent(mountPoint: string = this.Config.SecretMountPoint){
+    public async MountPresent(mountPoint: string = this.Config.SecretMountPoint) {
         const mounts = await this.vault.mounts();
         // Check if Mounting was Done
         return (mounts[mountPoint + "/"] != null);
     }
 
+    // Need to Re-Sign-In After
+    // Entering Admin Mode
+    public AdminMode(){
+        this.vault.token = this.Config.Token;
+    }
+
     // This is An Admin Action
     public async Mount(mountPoint: string = this.Config.SecretMountPoint) {
+        this.AdminMode();
         // Check if Mounting was Done
         if (await this.MountPresent(mountPoint)) {
             return null;
@@ -79,8 +86,9 @@ export class VaultAccess {
     }
     // This is An Admin Action
     public async Unmount(mountPoint: string = this.Config.SecretMountPoint) {
+        this.AdminMode();
         // Check if Mounting was Done
-        if (await this.MountPresent(mountPoint)) {
+        if (!(await this.MountPresent(mountPoint))) {
             return null;
         }
         return await this.vault.unmount({
@@ -98,43 +106,51 @@ export class VaultAccess {
     }
 
     public async UsersGet() {
-        const users = (await this.vault.list(`auth/userpass/users`)).data.keys as string[];
-        return users;
+        try {
+            const users = (await this.vault.list(`auth/userpass/users`)).data.keys as string[];
+            return users;
+        } catch (err) {
+            return [];
+        }
     }
 
     public async SignUp(password: string, username: string = this.Config.UserName, policy: string = this.Config.Policy) {
         const users = await this.UsersGet();
-        if (!users.includes(username))
+        if (users.includes(username))
             return null;
         this.Config.UserName = username;
-        this.Config.Policy = this.Config.Policy + "/" + this.Config.UserName;
-        return await this.vault.write(`auth/userpass/users/${username}`, { password, policies: policy });
+        await this.AddPolicy();
+        return await this.vault.write(`auth/userpass/users/${username}`, { password, policies: `${policy}/${username}` });
     }
     public async PoliciesGet() {
-        return (await this.vault.policies()).policies as string[];
+        try {
+            return (await this.vault.policies()).policies as string[];
+        } catch (err) {
+            return [];
+        }
     }
     public async AddPolicy(policy: string = this.Config.Policy, mount_point: string = this.Config.Path, authority: string[] = this.Config.Authority, policy_add: boolean = false) {
         if (!policy_add) {
             const policies = await this.PoliciesGet();
-            if (policies.includes(policy))
+            if (policies.includes(`${policy}/${this.Config.UserName}`))
                 return null;
         }
         return await this.vault.addPolicy({
-            name: policy,
-            rules: `path "${mount_point}/*" { capabilities = ${JSON.stringify(authority)} }`
+            name: `${policy}/${this.Config.UserName}`,
+            rules: `path "${mount_point}/${this.Config.UserName}/*" { capabilities = ${JSON.stringify(authority)} }`
         });
     }
 
     public async Write(key: string, value: any) {
-        return await this.vault.write(`${this.Config.Path}/${key}`, {
+        return await this.vault.write(`${this.Config.Path}/${this.Config.UserName}/${key}`, {
             value: value
         });
     }
     public async Read(key: string) {
-        return (await this.vault.read(`${this.Config.Path}/${key}`)).data.value;
+        return (await this.vault.read(`${this.Config.Path}/${this.Config.UserName}/${key}`)).data.value;
     }
     public async Delete(key: string) {
-        return await this.vault.read(`${this.Config.Path}/${key}`);
+        return await this.vault.read(`${this.Config.Path}/${this.Config.UserName}/${key}`);
     }
 
 }
