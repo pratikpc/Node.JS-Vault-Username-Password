@@ -26,7 +26,7 @@ Check out this sample code in samples/example.js
     async function run(){
     	await Vault.Setup();
     	// Uncomment to SignUp
-        // await Vault.SignUp('password'/*, 'username' */);
+    	// await Vault.SignUp('password'/*, 'username' */);
     	await Vault.SignIn('password'/*, 'username' */);
     	await Vault.Write('key', {
     		foo: '3',

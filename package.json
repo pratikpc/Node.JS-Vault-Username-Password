@@ -1,0 +1,28 @@
+{
+  "name": "vault-sample-nodejs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "example": "npm run build && node ./samples/example.js"
+  },
+  "author": "Pratik Chowdhury",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pratikpc/Node.JS-Vault-Username-Password.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pratikpc/Node.JS-Vault-Username-Password/issues"
+  },
+  "homepage": "https://github.com/pratikpc/Node.JS-Vault-Username-Password#readme",
+  "dependencies": {
+    "node-vault": "^0.9.13"
+  },
+  "devDependencies": {
+    "@types/node-vault": "^0.9.1",
+    "typescript": "^3.8.3"
+  }
+}
