@@ -6,6 +6,7 @@ For further details regarding Password Based Auth, check out [https://learn.hash
 
 This code ensures that One User cannot access data of another user present in the Vault. It uses the node-vault Library
 
+Install with npm i node-vault-userpass
 ## Sample Code
 Check out this sample code in samples/example.js
 
