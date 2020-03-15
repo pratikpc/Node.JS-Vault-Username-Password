@@ -150,7 +150,7 @@ export class VaultAccess {
         return (await this.vault.read(`${this.Config.Path}/${this.Config.UserName}/${key}`)).data.value;
     }
     public async Delete(key: string) {
-        return await this.vault.read(`${this.Config.Path}/${this.Config.UserName}/${key}`);
+        return await this.vault.delete(`${this.Config.Path}/${this.Config.UserName}/${key}`);
     }
 
 }
