@@ -1,6 +1,6 @@
 {
   "name": "node-vault-user-pass",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A sample code for Node.JS with Hashicorp involving Username and Password based Authentication",
   "keywords": [
     "hashicorp",

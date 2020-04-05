@@ -98,6 +98,9 @@ export class VaultAccess {
 
     // Will Throw Exception on Sign In Failure
     public async SignIn(password: string, username: string = this.Config.UserName) {
+        const users = await this.UsersGet();
+        if (!users.includes(username))
+            throw new Error("User Does Not Exist");
         const user = await this.vault.userpassLogin({
             username, password
         });
@@ -121,6 +124,12 @@ export class VaultAccess {
         this.Config.UserName = username;
         await this.AddPolicy();
         return await this.vault.write(`auth/userpass/users/${username}`, { password, policies: `${policy}/${username}` });
+    }
+    public async ChangePassword(password: string, oldPassword: string, username: string = this.Config.UserName, policy: string = this.Config.Policy) {
+        await this.SignIn(oldPassword, username);
+        const result = await this.vault.write(`auth/userpass/users/${username}/${oldPassword}`, { password: password});
+        await this.SignIn(password, username);
+        return result;
     }
     public async PoliciesGet() {
         try {
