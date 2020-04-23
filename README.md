@@ -12,55 +12,60 @@ Install with
 `npm i node-vault-user-pass
 `
 
-## Sample Code
-Check out this sample code in [samples/index.js](https://github.com/pratikpc/Node.JS-Vault-Username-Password/blob/master/samples/index.js "samples/index.js")
+## [Sample Code](samples/index.js)
 
-	// process.env.DEBUG = 'node-vault'; // switch on debug mode
-	const { VaultAccess } = require("node-vault-user-pass");
+#### CONFIGURATION
+```javascript
+// process.env.DEBUG = 'node-vault'; // switch on debug mode
+const { VaultAccess } = require("node-vault-user-pass");
+```
+#### Initialize
+```javascript
+const Vault = new VaultAccess({
+	Authority: ["create", "read", "update", "delete", "list", "sudo"],
+	Path: 'path',
+	Policy: 'auth_policy',
+	EndPoint: 'http://localhost:8200',
+	UserName: "username",
+	SecretMountPoint: 'secret_zone',
+	// Either Set this in Command Line as an Environment Variable
+	// Use set VAULT_TOKEN or export VAULT_TOKEN depending
+	// upon your OS
+	// Or Provide it as String Here
+	// This must be a Root Token
+	// Or a token with substantial access
+	Token: String(process.env.VAULT_TOKEN),
+	// Yet to be Implemented
+	CertificateMountPoint: "certificate"
+})
+```
+#### RUNNING
+```javascript
+async function run() {
+	// In Order to run Setup, the user needs Root Token
+	await Vault.Setup();
+	await Vault.SignUp('password', /*'username'*/);
+	console.log("Sign Up Successfull");
+	await Vault.SignIn('password', /*'username'*/);
+	console.log("Sign In Successfull");
 
-	const Vault = new VaultAccess({
-		Authority: ["create", "read", "update", "delete", "list", "sudo"],
-		Path: 'path',
-		Policy: 'auth_policy',
-		EndPoint: 'http://localhost:8200',
-		UserName: "username",
-		SecretMountPoint: 'secret_zone',
-		// Either Set this in Command Line as an Environment Variable
-		// Use set VAULT_TOKEN or export VAULT_TOKEN depending
-		// upon your OS
-		// Or Provide it as String Here
-		// This must be a Root Token
-		// Or a token with substantial access
-		Token: String(process.env.VAULT_TOKEN),
-		// Yet to be Implemented
-		CertificateMountPoint: "certificate"
-	})
+	const value = {
+		foo: '3',
+		bar: '4'
+	};
+	await Vault.Write('key', value);
+	console.log("Wrote Value", value, "successfully");
+	const val = await Vault.Read('key');
+	console.log("Read value is ", val);
 
-	async function run() {
-		// In Order to run Setup, the user needs Root Token
-		await Vault.Setup();
-		await Vault.SignUp('password' /*, 'username' */);
-		console.log("Sign Up Successfull");
-		await Vault.SignIn('password' /*, 'username' */);
-		console.log("Sign In Successfull");
+	// Unmount is an admin action
+	// As such, the user needs Root Token
+	// Or At least access to /sys/mount provided
+	await Vault.Unmount();
+}
 
-		const value = {
-			foo: '3',
-			bar: '4'
-		};
-		await Vault.Write('key', value);
-		console.log("Wrote Value", value, "successfully");
-		const val = await Vault.Read('key');
-		console.log("Read value is ", val);
-
-		// Unmount is an admin action
-		// As such, the user needs Root Token
-		// Or At least access to /sys/mount provided
-		await Vault.Unmount();
-	}
-
-	run().then(() => { console.log("done") })
-
+run().then(() => { console.log("done") })
+```
 ## Reason for Creation
 1. To Ensure Secured Access to data
 2. To Ensure Secured Storage of Data
@@ -73,7 +78,7 @@ Check out this sample code in [samples/index.js](https://github.com/pratikpc/Nod
 1. [node-vault](https://www.npmjs.com/package/node-vault "node-vault") Library for API Calls to Vault
 
 #### RUNNING Vault
-You can run Vault via Docker. I have created a [simple script to run Vault with Docker](https://github.com/pratikpc/Docker-Common-Configs/blob/master/Vault%20Docker%20Starter.bat "simple script to run Vault with Docker").
+You can run Vault via Docker. I have created a [simple script to run Vault with Docker](https://github.com/pratikpc/Docker-Common-Configs/blob/master/Vault%20Docker%20Starter.bat).
 
 #### Contact Us
 You could contact me [via LinkedIn](https://www.linkedin.com/in/pratik-chowdhury-889bb2183/ "via LinkedIn")
