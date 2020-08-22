@@ -9,6 +9,6 @@
   "author": "Pratik Chowdhury (https://github.com/pratikpc/)",
   "license": "MIT",
   "dependencies": {
-    "node-vault-user-pass": ".."
+    "node-vault-user-pass": "file:../"
   }
 }
