@@ -21,3 +21,7 @@ GALLERY.md
 rollup.config.js
 PULL_REQUEST_TEMPLATE.md
 .yalc/
+abc
+4
+.eslintcache
+*.tsbuildinfo
