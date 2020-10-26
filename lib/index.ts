@@ -1,14 +1,15 @@
 import NodeVault from "node-vault";
 
 class VaultConfig {
-  Path: string = "data";
-  Policy: string = "AppPolicy";
+  Path = "data";
+  Policy = "AppPolicy";
   Authority: string[] = [];
-  EndPoint: string = "http://localhost:8200";
-  UserName: string = "";
-  SecretMountPoint: string = "secret";
-  CertificateMountPoint: string = "certificate";
-  Token: string = String(process.env.VAULT_TOKEN);
+  EndPoint = "http://localhost:8200";
+  UserName = "";
+  SecretMountPoint = "secret";
+  CertificateMountPoint = "certificate";
+  Token = String(process.env.VAULT_TOKEN);
+  AltToken = "";
 }
 
 export class VaultAccess {
@@ -18,82 +19,100 @@ export class VaultAccess {
 
   constructor(Config: VaultConfig) {
     // Lower Case All Params
-    {
-      Config.SecretMountPoint = Config.SecretMountPoint.toLowerCase();
-      Config.Path = Config.SecretMountPoint + "/" + Config.Path;
-      Config.Path = Config.Path.toLowerCase();
-      Config.Policy = Config.Policy.toLowerCase();
-      Config.UserName = Config.UserName.toLowerCase();
-    }
+
     this.Config = Config;
+    this.Config.SecretMountPoint = this.Config.SecretMountPoint.toLowerCase();
+    this.Config.Path = `${this.Config.SecretMountPoint}/${this.Config.Path}`;
+    this.Config.Path = this.Config.Path.toLowerCase();
+    this.Config.Policy = this.Config.Policy.toLowerCase();
+    this.Config.UserName = this.Config.UserName.toLowerCase();
+
     this.vault = NodeVault({
       apiVersion: "v1",
       endpoint: this.Config.EndPoint,
       token: this.Config.Token
     });
   }
+
   public async Setup() {
     await this.InitVault();
     await this.InitLogin();
     await this.Mount();
   }
+
   public async InitVault() {
-    this.AdminMode();
-    const check_init = await this.vault.initialized();
-    if (Boolean(check_init.initialized)) return;
-    const init = await this.vault.init({
-      secret_shares: 1,
-      secret_threshold: 1
+    return this.AdminMode(async () => {
+      const checkInit = await this.vault.initialized();
+      if (checkInit.initialized) return;
+      const init = await this.vault.init({
+        secret_shares: 1,
+        secret_threshold: 1
+      });
+      this.vault.token = init.root_token;
+      const key = init.keys[0];
+      await this.vault.unseal({ secret_shares: 1, key: key });
     });
-    this.vault.token = init.root_token;
-    const key = init.keys[0];
-    await this.vault.unseal({ secret_shares: 1, key });
   }
+
   public async InitLogin() {
-    this.AdminMode();
-    const auths = await this.vault.auths();
-    if (auths.hasOwnProperty("userpass/")) return null;
-    return await this.vault.enableAuth({
-      mount_point: "userpass",
-      type: "userpass",
-      description: "userpass auth"
+    return this.AdminMode(async () => {
+      const auths = await this.vault.auths();
+      if (auths.hasOwnProperty("userpass/")) return null;
+      return await this.vault.enableAuth({
+        mount_point: "userpass",
+        type: "userpass",
+        description: "userpass auth"
+      });
     });
   }
 
   public async MountPresent(mountPoint: string = this.Config.SecretMountPoint) {
     const mounts = await this.vault.mounts();
     // Check if Mounting was Done
-    return mounts[mountPoint + "/"] != null;
+    return mounts[`${mountPoint}/`] != null;
   }
 
   // Need to Re-Sign-In After
   // Entering Admin Mode
-  public AdminMode() {
-    this.vault.token = this.Config.Token;
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  public async AdminMode(func: Function) {
+    try {
+      this.Config.AltToken = this.vault.token;
+      this.vault.token = this.Config.Token;
+      const result = await func();
+      this.vault.token = this.Config.AltToken;
+      return result;
+    } catch (err) {
+      this.vault.token = this.Config.AltToken;
+      throw err;
+    }
   }
 
   // This is An Admin Action
   public async Mount(mountPoint: string = this.Config.SecretMountPoint) {
-    this.AdminMode();
-    // Check if Mounting was Done
-    if (await this.MountPresent(mountPoint)) {
-      return null;
-    }
-    return await this.vault.mount({
-      mount_point: mountPoint,
-      type: "kv",
-      description: "Data Storage Mounted"
+    return this.AdminMode(async () => {
+      // Check if Mounting was Done
+      if (await this.MountPresent(mountPoint)) {
+        return null;
+      }
+      return await this.vault.mount({
+        mount_point: mountPoint,
+        type: "kv",
+        description: "Data Storage Mounted"
+      });
     });
   }
+
   // This is An Admin Action
   public async Unmount(mountPoint: string = this.Config.SecretMountPoint) {
-    this.AdminMode();
-    // Check if Mounting was Done
-    if (!(await this.MountPresent(mountPoint))) {
-      return null;
-    }
-    return await this.vault.unmount({
-      mount_point: mountPoint
+    return this.AdminMode(async () => {
+      // Check if Mounting was Done
+      if (!(await this.MountPresent(mountPoint))) {
+        return null;
+      }
+      return await this.vault.unmount({
+        mount_point: mountPoint
+      });
     });
   }
 
@@ -105,8 +124,8 @@ export class VaultAccess {
     const users = await this.UsersGet();
     if (!users.includes(username)) throw new Error("User Does Not Exist");
     const user = await this.vault.userpassLogin({
-      username,
-      password
+      username: username,
+      password: password
     });
     this.Config.UserName = username;
     return user;
@@ -132,14 +151,16 @@ export class VaultAccess {
     this.Config.UserName = username;
     await this.AddPolicy();
     return await this.vault.write(`auth/userpass/users/${username}`, {
-      password,
+      password: password,
       policies: `${policy}/${username}`
     });
   }
+
   public async ChangePassword(
     password: string,
     oldPassword: string,
     username: string = this.Config.UserName,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _policy: string = this.Config.Policy
   ) {
     await this.SignIn(oldPassword, username);
@@ -150,6 +171,7 @@ export class VaultAccess {
     await this.SignIn(password, username);
     return result;
   }
+
   public async PoliciesGet() {
     try {
       return (await this.vault.policies()).policies as string[];
@@ -157,11 +179,12 @@ export class VaultAccess {
       return [];
     }
   }
+
   public async AddPolicy(
     policy: string = this.Config.Policy,
     mount_point: string = this.Config.Path,
     authority: string[] = this.Config.Authority,
-    policy_add: boolean = false
+    policy_add = false
   ) {
     if (!policy_add) {
       const policies = await this.PoliciesGet();
@@ -175,7 +198,7 @@ export class VaultAccess {
     });
   }
 
-  public async Write(key: string, value: any) {
+  public async Write(key: string, value: unknown) {
     return await this.vault.write(
       `${this.Config.Path}/${this.Config.UserName}/${key}`,
       {
@@ -183,17 +206,34 @@ export class VaultAccess {
       }
     );
   }
+
   public async Read(key: string) {
+    console.log(`${this.Config.Path}/${this.Config.UserName}/${key}`);
     return (
       await this.vault.read(
         `${this.Config.Path}/${this.Config.UserName}/${key}`
       )
     ).data.value;
   }
+
   public async Delete(key: string) {
     return await this.vault.delete(
       `${this.Config.Path}/${this.Config.UserName}/${key}`
     );
+  }
+
+  public ChangeToken(token: string) {
+    this.vault.token = token;
+  }
+
+  public async TokenLookup(token: string | undefined) {
+    if (token != null)
+      return await this.AdminMode(async () => {
+        return await this.vault.tokenLookup({
+          token: token
+        });
+      });
+    return await this.vault.tokenLookupSelf();
   }
 }
 export default VaultAccess;
