@@ -17,15 +17,24 @@ export class VaultAccess {
   public vault: NodeVault.client;
   public Config: VaultConfig;
 
-  constructor(Config: VaultConfig) {
+  constructor(Config: Pick<VaultConfig, "Token"> & Partial<VaultConfig>) {
     // Lower Case All Params
 
-    this.Config = Config;
-    this.Config.SecretMountPoint = this.Config.SecretMountPoint.toLowerCase();
+    this.Config = new VaultConfig();
+
+    this.Config.Path = (Config.Path || "data").toLowerCase();
+    this.Config.Policy = (Config.Policy || "AppPolicy").toLowerCase();
+    this.Config.Authority = Config.Authority || [];
+    this.Config.EndPoint = Config.EndPoint || "http://localhost:8200";
+    this.Config.SecretMountPoint = (
+      Config.SecretMountPoint || "secret"
+    ).toLowerCase();
+    this.Config.CertificateMountPoint = (
+      Config.CertificateMountPoint || "certificate"
+    ).toLowerCase();
+    this.Config.UserName = (Config.UserName || "").toLowerCase();
+
     this.Config.Path = `${this.Config.SecretMountPoint}/${this.Config.Path}`;
-    this.Config.Path = this.Config.Path.toLowerCase();
-    this.Config.Policy = this.Config.Policy.toLowerCase();
-    this.Config.UserName = this.Config.UserName.toLowerCase();
 
     this.vault = NodeVault({
       apiVersion: "v1",
