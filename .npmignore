@@ -25,3 +25,10 @@ abc
 4
 .eslintcache
 *.tsbuildinfo
+.github/*
+.prettier*
+.eslint*
+lib/*
+samples/*
+LICENSE
+README.md
