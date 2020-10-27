@@ -208,7 +208,6 @@ export class VaultAccess {
   }
 
   public async Read(key: string) {
-    console.log(`${this.Config.Path}/${this.Config.UserName}/${key}`);
     return (
       await this.vault.read(
         `${this.Config.Path}/${this.Config.UserName}/${key}`
