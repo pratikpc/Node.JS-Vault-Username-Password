@@ -225,7 +225,7 @@ export class VaultAccess {
     this.vault.token = token;
   }
 
-  public async TokenLookup(token: string | undefined) {
+  public async TokenLookup(token: string | undefined = undefined) {
     if (token != null)
       return await this.AdminMode(async () => {
         return await this.vault.tokenLookup({
