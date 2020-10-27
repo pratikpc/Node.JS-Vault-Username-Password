@@ -156,6 +156,21 @@ export class VaultAccess {
     });
   }
 
+  public async UserName() {
+    if (this.Config.UserName != null && this.Config.UserName !== "")
+      return this.Config.UserName;
+    let user = (await this.TokenLookup()).data;
+
+    if (user == null) return "";
+    if (user.meta != null) user = user.meta;
+    else if (user.display_name != null) return user.display_name;
+    else return "";
+    if (user != null) user = user.username;
+    else return "";
+    this.Config.UserName = user;
+    return user;
+  }
+
   public async ChangePassword(
     password: string,
     oldPassword: string,
