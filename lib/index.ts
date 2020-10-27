@@ -128,9 +128,11 @@ export class VaultAccess {
   // Will Throw Exception on Sign In Failure
   public async SignIn(
     password: string,
-    username: string = this.Config.UserName
+    username_: string = this.Config.UserName
   ) {
     const users = await this.UsersGet();
+    let username = username_.repeat(1);
+    if (username === "") username = await this.UserName();
     if (!users.includes(username)) throw new Error("User Does Not Exist");
     const user = await this.vault.userpassLogin({
       username: username,
@@ -152,10 +154,12 @@ export class VaultAccess {
 
   public async SignUp(
     password: string,
-    username: string = this.Config.UserName,
+    username_: string = this.Config.UserName,
     policy: string = this.Config.Policy
   ) {
     const users = await this.UsersGet();
+    let username = username_.repeat(1);
+    if (username === "") username = await this.UserName();
     if (users.includes(username)) return null;
     this.Config.UserName = username;
     await this.AddPolicy();
@@ -183,10 +187,12 @@ export class VaultAccess {
   public async ChangePassword(
     password: string,
     oldPassword: string,
-    username: string = this.Config.UserName,
+    username_: string = this.Config.UserName,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _policy: string = this.Config.Policy
   ) {
+    let username = username_.repeat(1);
+    if (username === "") username = await this.UserName();
     await this.SignIn(oldPassword, username);
     const result = await this.vault.write(
       `auth/userpass/users/${username}/${oldPassword}`,
